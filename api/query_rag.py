@@ -1,6 +1,5 @@
 import os
 import argparse
-from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
 from langchain_cohere import CohereRerank
@@ -26,43 +25,45 @@ Anything between the following `context` html blocks is retrieved from a knowled
 
 
 def main():
-    # Create CLI.
-    parser = argparse.ArgumentParser()
-    parser.add_argument("query_text", type=str, help="The query text.")
-    args = parser.parse_args()
-    query_text = args.query_text
-    answer = query_rag(query_text)
+  # Create CLI.
+  parser = argparse.ArgumentParser()
+  parser.add_argument("query_text", type=str, help="The query text.")
+  args = parser.parse_args()
+  query_text = args.query_text
+  answer = query_rag(query_text)
 
-
-def prettify_docs(docs: list[Document]) -> str:
-    prettify = f"\n{'-' * 100}\n".join(
-      [f"source: {d.metadata.get('id', None)}\n\n" + d.page_content for d in docs]
-    )
-    return prettify
 
 def query_rag(query_text: str):
-    db = get_chroma_client()
-    retriever = db.as_retriever(search_kwargs={"k": 20})
-    llm = get_openai_llm()
+  db = get_chroma_client()
+  retriever = db.as_retriever(search_kwargs={"k": 20})
 
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            ("system", PROMPT_TEMPLATE),
-            ("human", "{question}"),
-        ]
-    )
+  prompt = ChatPromptTemplate.from_messages(
+      [
+          ("system", PROMPT_TEMPLATE),
+          ("human", "{question}"),
+      ]
+  )
 
-    # Using Cohere to rerank the documents
-    compressor = CohereRerank(cohere_api_key=COHERE_API_KEY, top_n=3)
-    compression_retriever = ContextualCompressionRetriever(
-        base_compressor=compressor, base_retriever=retriever
-    )
-    compressed_docs = compression_retriever.invoke(query_text)
+  # Using Cohere to rerank the documents
+  compressor = CohereRerank(cohere_api_key=COHERE_API_KEY, top_n=3)
+  compression_retriever = ContextualCompressionRetriever(
+      base_compressor=compressor, base_retriever=retriever
+  )
+  results = compression_retriever.invoke(query_text)
 
-    context_text = prettify_docs(compressed_docs)
-    prompt_template = ChatPromptTemplate.from_template(PROMPT_TEMPLATE)
-    prompt = prompt_template.format(context=context_text, question=query_text)
-    print(prompt)
+  # Format the retrieved documents and prepare chat promt template
+  context_text = "\n\n".join(doc.page_content for doc in results)
+  sources = [doc.metadata.get("id", None) for doc in results]
+  prompt_template = ChatPromptTemplate.from_template(PROMPT_TEMPLATE)
+  prompt = prompt_template.format(context=context_text, question=query_text)
+
+  # Prepare our model and invoke it with our prompt
+  llm = get_openai_llm()
+  response_text = llm.invoke(prompt)
+  formatted_response = f"Response: {response_text.content}\nSources: {sources}"
+  print(formatted_response)
+
+  return response_text
 
 
 if __name__ == "__main__":
