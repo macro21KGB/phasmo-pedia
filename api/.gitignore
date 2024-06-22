@@ -1,4 +1,5 @@
 __pycache__
 .venv
-data/chroma
 .env
+data/chroma
+data/cache

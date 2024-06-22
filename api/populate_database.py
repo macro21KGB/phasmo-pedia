@@ -11,8 +11,8 @@ from bs4 import BeautifulSoup
 from config import CHROMA_PATH, SITEMAP_PATH
 
 
-
 def main():
+    # Reset the database by passing --reset argument
     parser = argparse.ArgumentParser()
     parser.add_argument("--reset", action="store_true", help="Reset the database.")
     args = parser.parse_args()
@@ -34,13 +34,27 @@ def extract_main_content(div_content: BeautifulSoup) -> str:
     content = div_content.find("div", class_="mw-parser-output")
     if not content:
         return ""
-    table_of_content = content.find("div", class_="toc", id="toc", role="navigation")
-    if table_of_content:
-        table_of_content.decompose()
-    navigation = content.find("div", role="navigation", class_="navbox")
-    if navigation:
-        navigation.decompose()
-    return str(content.get_text())
+
+    # List of elements to remove
+    elements_to_remove = [
+        {"name": "div", "attrs": {"class": "toc", "id": "toc", "role": "navigation"}},
+        {"name": "div", "attrs": {"role": "navigation", "class": "navbox"}},
+    ]
+
+    for element in elements_to_remove:
+        el = content.find(element["name"], attrs=element["attrs"])
+        if el:
+            el.decompose()
+
+    # Find the specific <div> and remove the subsequent table
+    references_wrap = content.find("div", class_="mw-references-wrap")
+    if references_wrap:
+        next_table = references_wrap.find_next("table")
+        if next_table:
+            next_table.decompose()
+
+    # Return the text content of the cleaned main element
+    return content.get_text()
 
 
 def load_documents():
@@ -52,9 +66,14 @@ def load_documents():
 
 
 def process_string(input_string: str):
+    # Remove URLs
+    processed_string = re.sub(r'http\S+', '', input_string)
+    # Remove all occurrences of square brackets and their contents
+    processed_string = re.sub(r'\[.*?\]', '', processed_string)
+    # Remove text before []
+    processed_string = re.sub(r'\b\w+\[\]', '', processed_string)
     # Replace newlines, tabs, and multiple spaces with a single space
-    processed_string = re.sub(r'[\n\t ]+', ' ', input_string)
-    # Remove leading and trailing blank spaces
+    processed_string = re.sub(r'[\n\t ]+', ' ', processed_string)
     processed_string = processed_string.strip()
     return processed_string
 
