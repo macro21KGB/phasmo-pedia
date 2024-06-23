@@ -6,7 +6,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.schema.document import Document
 from langchain_community.vectorstores import Chroma
 from langchain_community.document_loaders.sitemap import SitemapLoader
-from get_vector_db import get_chroma_client
+from rag_app.get_vector_db import get_chroma_client
 from bs4 import BeautifulSoup
 from config import CHROMA_PATH, SITEMAP_PATH
 

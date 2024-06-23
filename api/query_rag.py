@@ -30,18 +30,17 @@ class QueryResponse:
   response_text: str
   sources: List[str]
 
+
 def main():
   # Create CLI.
   parser = argparse.ArgumentParser()
   parser.add_argument("query_text", type=str, help="The query text.")
   args = parser.parse_args()
   query_text = args.query_text
-  response = query_rag(query_text)
-  formatted_response = f"Question: {response.query_text}\n\nResponse: {response.response_text}\n\nSources: {response.sources}"
-  print(formatted_response)
+  query_rag(query_text)
 
 
-# Retrieve docs from our vector db and performing rerank
+# Retrieve docs from our vector db and perform rerank
 def retrieve_docs(query_text: str):
   db = get_chroma_client()
   retriever = db.as_retriever(search_kwargs={"k": 20})
@@ -63,11 +62,14 @@ def query_rag(query_text: str) -> QueryResponse:
   # Create a chat promt template
   prompt_template = ChatPromptTemplate.from_template(PROMPT_TEMPLATE)
   prompt = prompt_template.format(context=context_text, question=query_text)
+  print(prompt)
 
   # Init the model and invoke it with the prompt
   llm = get_openai_llm()
   response = llm.invoke(prompt)
   response_text = response.content
+  formatted_response = f"\n\nResponse: {response_text}\nSources: {sources}"
+  print(formatted_response)
 
   return QueryResponse(
     query_text=query_text, response_text=response_text, sources=sources
