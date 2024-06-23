@@ -3,15 +3,17 @@ import argparse
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
 from langchain_cohere import CohereRerank
-from get_vector_db import get_chroma_client
-from get_llm import get_openai_llm
+from rag_app.get_vector_db import get_chroma_client
+from rag_app.get_llm import get_openai_llm
 from config import LANGCHAIN_API_KEY, COHERE_API_KEY
 from dataclasses import dataclass
 from typing import List
 
+
 if LANGCHAIN_API_KEY:
   os.environ["LANGCHAIN_TRACING_V2"] = "true"
   os.environ["LANGCHAIN_API_KEY"] = LANGCHAIN_API_KEY
+
 
 PROMPT_TEMPLATE = """
 You are an assistant for question-answering tasks related to Phasmophobia.
@@ -23,6 +25,7 @@ Answer the question based only on the following context:
 
 Question: {question}
 """
+
 
 @dataclass
 class QueryResponse:
