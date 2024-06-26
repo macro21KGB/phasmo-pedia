@@ -2,9 +2,20 @@ import { createTheme, responsiveFontSizes } from '@mui/material';
 import LazyDogTTF from './fonts/lazy_dog.ttf';
 
 let theme = createTheme({
+  palette: {
+    background: {
+      default: '#212121',
+    },
+    text: {
+      primary: '#ececec',
+      secondary: '#b4b4b4',
+    },
+    secondary: {
+      main: '#2f2f2f',
+    },
+  },
   typography: {
     fontFamily: 'LazyDog, "Courier New", monospace',
-    fontSize: 20,
   },
   components: {
     MuiCssBaseline: {
