@@ -12,50 +12,17 @@ import {
   Typography,
   List,
   ListItem,
-  ListItemText,
   CircularProgress,
-  createTheme,
   ThemeProvider,
   CssBaseline,
   Container,
-  responsiveFontSizes,
   Card,
   CardContent,
   CardHeader,
 } from '@mui/material';
-import SendIcon from '@mui/icons-material/Send';
 import { Message } from './types';
 import { submitQuery } from './services/RagService';
-import LazyDogTTF from './fonts/lazy_dog.ttf';
-
-let theme = createTheme({
-  typography: {
-    fontFamily: 'LazyDog, Arial',
-    fontSize: 24,
-  },
-  components: {
-    MuiCssBaseline: {
-      styleOverrides: `
-        @font-face {
-          font-family: 'LazyDog';
-          src: local('LazyDog'), url(${LazyDogTTF}) format('truetype');
-        }
-        *,
-        *:before,
-        *:after {
-          padding: 0;
-          margin: 0;
-          box-sizing: border-box;
-        }
-        html, body, #root {
-          height: 100%;
-        }
-      `,
-    },
-  },
-});
-
-theme = responsiveFontSizes(theme);
+import theme from './theme';
 
 const queryClient = new QueryClient();
 
@@ -63,22 +30,27 @@ const PhasmoChat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: Date.now(),
+      type: 'bot',
+      text: 'Welcome to PhasmoChat! How can I assist you with your ghost hunting today?',
+    },
+    {
+      id: Date.now() + 1000,
       type: 'user',
       text: 'Hello bot.',
     },
     {
-      id: Date.now() + 1,
+      id: Date.now() + 2000,
       type: 'bot',
       text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed in dignissim lacus. Nam faucibus et lacus quis sodales. Praesent commodo mauris in sodales vulputate. Praesent odio nisl, scelerisque ac diam non, sodales congue enim. Donec aliquet egestas nisl ac commodo. Ut viverra scelerisque tortor in ullamcorper. Nullam eu odio vitae ligula bibendum vulputate vitae ut lorem. Aliquam erat volutpat. In a magna arcu. Etiam tincidunt mi sed efficitur commodo.',
       sources: ['source1', 'source2'],
     },
     {
-      id: Date.now() + 2,
+      id: Date.now() + 3000,
       type: 'user',
       text: 'Give me some error please.',
     },
     {
-      id: Date.now() + 3,
+      id: Date.now() + 4000,
       type: 'error',
       text: 'Network error',
     },
@@ -120,6 +92,16 @@ const PhasmoChat: React.FC = () => {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    // Simulated bot response
+    setTimeout(() => {
+      const botMessage: Message = {
+        id: Date.now(),
+        type: 'bot',
+        text: `Here's a simulated response to "${input}". In a real app, this would be replaced with actual AI-generated content about Phasmophobia.`,
+      };
+      setMessages((prev) => [...prev, botMessage]);
+    }, 1000);
+
     /* Disabled sending to backend for now */
     // sendMessage(input);
     setInput('');
@@ -127,7 +109,13 @@ const PhasmoChat: React.FC = () => {
 
   return (
     <Container sx={{ height: '100%', py: 2 }}>
-      <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <Box
+        sx={{
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+        }}
+      >
         <Paper
           elevation={3}
           sx={{
@@ -154,20 +142,21 @@ const PhasmoChat: React.FC = () => {
                         ? 'primary.light'
                         : message.type === 'error'
                           ? 'error.light'
-                          : 'secondary.light',
+                          : 'success.light',
                     color:
                       message.type === 'error'
                         ? 'error.contrastText'
                         : 'inherit',
+                    textTransform: 'uppercase',
                   }}
                 >
-                  {message.type !== 'error' && (
-                    <CardHeader
-                      title={message.type === 'user' ? 'USER' : 'SPIRIT'}
-                      subheader={new Date(message.id).toISOString()}
-                      sx={{ pb: 0 }}
-                    />
-                  )}
+                  <CardHeader
+                    title={message.type}
+                    subheader={new Date(message.id).toISOString()}
+                    sx={{
+                      pb: 0,
+                    }}
+                  />
                   <CardContent>{message.text}</CardContent>
                 </Card>
                 {message.sources && (
