@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import {
   Box,
@@ -48,6 +48,12 @@ const getLastUrlPath = (url: string) => {
 export const PhasmoChat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>(sample_messages);
   const [input, setInput] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Scroll down the message list when new message added
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   // Mutation hook for sending query
   const { mutate: sendMessage, isPending } = useMutation({
@@ -85,127 +91,133 @@ export const PhasmoChat: React.FC = () => {
 
     setMessages((prev) => [...prev, userMessage]);
     // Simulated bot response
-    /* setTimeout(() => {
+    setTimeout(() => {
       const botMessage: Message = {
         id: Date.now(),
         type: 'bot',
         text: `Here's a simulated response to "${input}". In a real app, this would be replaced with actual AI-generated content about Phasmophobia.`,
       };
       setMessages((prev) => [...prev, botMessage]);
-    }, 1000); */
+    }, 1000);
 
-    sendMessage(input);
+    //sendMessage(input);
     setInput('');
   };
 
   return (
-    <>
-      <Container
-        maxWidth='md'
+    <Container
+      maxWidth='md'
+      sx={{
+        height: '100%',
+        py: 4,
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <List
         sx={{
-          height: '100%',
-          py: 2,
-          display: 'flex',
-          flexDirection: 'column',
+          flexGrow: 1,
+          overflowY: 'auto',
+          '&::-webkit-scrollbar': {
+            width: '12px',
+          },
+          '&::-webkit-scrollbar-thumb': {
+            borderRadius: '10px',
+            WebkitBoxShadow: 'inset 0 0 6px rgba(0,0,0,.3)',
+            bgcolor: 'secondary.light',
+          },
         }}
       >
-        <List
-          sx={{
-            flexGrow: 1,
-            overflowY: 'auto',
-            p: 2,
-            '&::-webkit-scrollbar': {
-              width: '12px',
-            },
-            '&::-webkit-scrollbar-thumb': {
-              borderRadius: '10px',
-              WebkitBoxShadow: 'inset 0 0 6px rgba(0,0,0,.3)',
-              bgcolor: 'secondary.light',
-            },
-          }}
-        >
-          {messages.map((message) => {
-            const secondaryText = message.sources ? (
-              <Typography variant='overline' sx={{ display: 'flex', gap: 0.5 }}>
-                Sources:
-                {message.sources.map((source, index) => (
-                  <Link
-                    key={index}
-                    href={source}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                  >
-                    {getLastUrlPath(source)}
-                  </Link>
-                ))}
-              </Typography>
-            ) : (
-              <></>
-            );
-            return (
-              <ListItem
-                key={message.id}
+        {messages.map((message) => {
+          const secondaryText = message.sources ? (
+            <Typography variant='overline' sx={{ display: 'flex', gap: 0.5 }}>
+              Sources:
+              {message.sources.map((source, index) => (
+                <Link
+                  key={index}
+                  href={source}
+                  target='_blank'
+                  rel='noopener noreferrer'
+                >
+                  {getLastUrlPath(source)}
+                </Link>
+              ))}
+            </Typography>
+          ) : (
+            <></>
+          );
+          return (
+            <ListItem
+              key={message.id}
+              sx={{
+                flexDirection: 'column',
+                alignItems: message.type === 'user' ? 'flex-end' : 'flex-start',
+              }}
+            >
+              <ListItemText
+                primary={message.text}
+                secondary={secondaryText}
                 sx={{
-                  flexDirection: 'column',
-                  alignItems:
-                    message.type === 'user' ? 'flex-end' : 'flex-start',
+                  maxWidth: '80%',
+                  bgcolor:
+                    message.type === 'user'
+                      ? 'secondary.main'
+                      : message.type === 'error'
+                        ? 'error.main'
+                        : 'transparent',
+                  p: 2,
+                  borderRadius: 10,
+                  textTransform: 'uppercase',
                 }}
-              >
-                <ListItemText
-                  primary={message.text}
-                  secondary={secondaryText}
-                  sx={{
-                    maxWidth: '80%',
-                    bgcolor:
-                      message.type === 'user'
-                        ? 'secondary.main'
-                        : message.type === 'error'
-                          ? 'error.main'
-                          : 'transparent',
-                    p: 2,
-                    borderRadius: 10,
-                    textTransform: 'uppercase',
-                  }}
-                />
-              </ListItem>
-            );
-          })}
-          {isPending && (
-            <ListItem sx={{ justifyContent: 'center' }}>
-              <CircularProgress size={24} />
+              />
             </ListItem>
-          )}
-        </List>
-        <Box
-          component='form'
-          onSubmit={handleSubmit}
+          );
+        })}
+        {isPending && (
+          <ListItem sx={{ justifyContent: 'center' }}>
+            <CircularProgress size={24} />
+          </ListItem>
+        )}
+        <div ref={messagesEndRef} />
+      </List>
+      <Box
+        component='form'
+        onSubmit={handleSubmit}
+        sx={{
+          display: 'flex',
+          bgcolor: 'secondary.main',
+          borderRadius: 10,
+          justifySelf: 'flex-end',
+          px: 1,
+        }}
+      >
+        <TextField
+          fullWidth
+          variant='outlined'
+          placeholder='Message PhasmoGPT'
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
           sx={{
-            display: 'flex',
-            bgcolor: 'secondary.main',
-            borderRadius: 10,
-            justifySelf: 'flex-end',
+            '& fieldset': { border: 'none' },
+            '& .MuiInputBase-input': {
+              fontFamily: 'Arial',
+            },
+          }}
+          autoComplete='off'
+        />
+        <IconButton
+          aria-label='submit'
+          type='submit'
+          sx={{
+            bgcolor: 'secondary.light',
+            height: '32px',
+            width: '32px',
+            alignSelf: 'center',
           }}
         >
-          <TextField
-            fullWidth
-            variant='outlined'
-            placeholder='Message PhasmoGPT'
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            sx={{
-              pl: 2,
-              '& fieldset': { border: 'none' },
-              '& .MuiInputBase-input': {
-                fontFamily: 'Arial',
-              },
-            }}
-            autoComplete='off'
-          />
-          <IconButton aria-label='submit' type='submit'>
-            <SendIcon />
-          </IconButton>
-        </Box>
-      </Container>
-    </>
+          <SendIcon fontSize='small' />
+        </IconButton>
+      </Box>
+    </Container>
   );
 };
