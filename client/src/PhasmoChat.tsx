@@ -9,6 +9,8 @@ import {
   ListItem,
   List,
   ListItemText,
+  Typography,
+  Link,
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import { Message } from './types';
@@ -37,6 +39,11 @@ const sample_messages: Message[] = [
     text: 'Network error',
   },
 ];
+
+const getLastUrlPath = (url: string) => {
+  const parts = url.split('/');
+  return parts[parts.length - 1];
+};
 
 export const PhasmoChat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>(sample_messages);
@@ -78,17 +85,16 @@ export const PhasmoChat: React.FC = () => {
 
     setMessages((prev) => [...prev, userMessage]);
     // Simulated bot response
-    setTimeout(() => {
+    /* setTimeout(() => {
       const botMessage: Message = {
         id: Date.now(),
         type: 'bot',
         text: `Here's a simulated response to "${input}". In a real app, this would be replaced with actual AI-generated content about Phasmophobia.`,
       };
       setMessages((prev) => [...prev, botMessage]);
-    }, 1000);
+    }, 1000); */
 
-    /* Disabled sending to backend for now */
-    // sendMessage(input);
+    sendMessage(input);
     setInput('');
   };
 
@@ -106,14 +112,36 @@ export const PhasmoChat: React.FC = () => {
         <List
           sx={{
             flexGrow: 1,
-            overflow: 'auto',
+            overflowY: 'auto',
             p: 2,
+            '&::-webkit-scrollbar': {
+              width: '12px',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              borderRadius: '10px',
+              WebkitBoxShadow: 'inset 0 0 6px rgba(0,0,0,.3)',
+              bgcolor: 'secondary.light',
+            },
           }}
         >
           {messages.map((message) => {
-            const secondaryText = message.sources
-              ? `Sources: ${message.sources.join(', ')}`
-              : '';
+            const secondaryText = message.sources ? (
+              <Typography variant='overline' sx={{ display: 'flex', gap: 0.5 }}>
+                Sources:
+                {message.sources.map((source, index) => (
+                  <Link
+                    key={index}
+                    href={source}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                  >
+                    {getLastUrlPath(source)}
+                  </Link>
+                ))}
+              </Typography>
+            ) : (
+              <></>
+            );
             return (
               <ListItem
                 key={message.id}
