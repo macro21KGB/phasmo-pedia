@@ -1,6 +1,7 @@
 import os
 import argparse
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.documents import Document
 from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
 from langchain_cohere import CohereRerank
 from rag_app.get_vector_db import get_chroma_client
@@ -56,11 +57,19 @@ def retrieve_docs(query_text: str):
   return compression_retriever.invoke(query_text)
 
 
+def extract_sources(results: List[Document]) -> list[str]:
+  sources = [doc.metadata.get("id", None) for doc in results]
+  cleaned_sources = list(set([
+    id.rsplit(':', 1)[0] if id else None for id in sources
+  ]))
+  cleaned_sources = list(filter(None, cleaned_sources))
+  return cleaned_sources
+
 def query_rag(query_text: str) -> QueryResponse:
   # Retrieve and format the documents
   results = retrieve_docs(query_text)
   context_text = "\n\n".join(doc.page_content for doc in results)
-  sources = [doc.metadata.get("id", None) for doc in results]
+  sources = extract_sources(results)
 
   # Create a chat promt template
   prompt_template = ChatPromptTemplate.from_template(PROMPT_TEMPLATE)
