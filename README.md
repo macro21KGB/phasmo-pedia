@@ -5,7 +5,7 @@ phasmo-chat is a generative AI project leveraging Retrieval-Augmented Generation
 ## Features
 
 - **Client Interface**: A user-friendly interface, similar to ChatGPT, where users can chat and ask questions about Phasmophobia.
-- **Question Answering**: Provides answers to questions about Phasmophobia using a Large Language Model (LLM) integrated with RAG for enhanced accuracy and context-aware responses.
+- **Question Answering API**: API that answers questions about Phasmophobia using a Large Language Model (LLM) integrated with RAG for enhanced accuracy and context-aware responses.
 - **Retrieval-Augmented Generation (RAG)**: Enhances the response accuracy by retrieving relevant information before generating answers, ensuring that responses are contextually relevant and accurate.
 
 ## How It Works
