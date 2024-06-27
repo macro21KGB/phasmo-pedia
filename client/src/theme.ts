@@ -15,7 +15,7 @@ let theme = createTheme({
     },
   },
   typography: {
-    fontFamily: 'LazyDog, "Courier New", monospace',
+    fontFamily: 'LazyDog, Arial',
   },
   components: {
     MuiCssBaseline: {

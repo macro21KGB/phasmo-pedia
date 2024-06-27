@@ -161,10 +161,16 @@ export const PhasmoChat: React.FC = () => {
           <TextField
             fullWidth
             variant='outlined'
-            placeholder='Type your query...'
+            placeholder='Message PhasmoGPT'
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            sx={{ pl: 2, '& fieldset': { border: 'none' } }}
+            sx={{
+              pl: 2,
+              '& fieldset': { border: 'none' },
+              '& .MuiInputBase-input': {
+                fontFamily: 'Arial',
+              },
+            }}
             autoComplete='off'
           />
           <IconButton aria-label='submit' type='submit'>
