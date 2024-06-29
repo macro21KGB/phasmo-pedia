@@ -1,8 +1,9 @@
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from rag_app.query_rag import query_rag, QueryResponse
+from rag_app.query_rag import query_rag, query_rag_stream, QueryResponse
 
 app = FastAPI()
 
@@ -25,6 +26,10 @@ class SubmitQueryRequest(BaseModel):
 def submit_query_endpoint(request: SubmitQueryRequest) -> QueryResponse:
   query_response = query_rag(request.query_text)
   return query_response
+
+@app.post("/submit_query_stream")
+async def submit_query_stream_endpoint(request: SubmitQueryRequest) -> StreamingResponse:
+  return StreamingResponse(query_rag_stream(request.query_text), media_type="text/event-stream")
 
 def main() -> None:
    port = 5656

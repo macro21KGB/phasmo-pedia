@@ -14,3 +14,13 @@ export type QueryResponse = {
   response_text: string;
   sources: string[];
 };
+
+export interface StreamData {
+  sources: string[];
+  answer: string;
+}
+
+export type StreamChunk = {
+  sources?: string[];
+  answer?: string;
+};

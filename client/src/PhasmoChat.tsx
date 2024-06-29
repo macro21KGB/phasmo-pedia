@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+/* import { useMutation } from '@tanstack/react-query'; */
 import {
   Box,
   TextField,
-  CircularProgress,
+  /* CircularProgress, */
   Container,
   IconButton,
   ListItem,
@@ -13,50 +13,25 @@ import {
   Link,
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
-import { Message } from './types';
-import { submitQuery } from './services/RagService';
-
-const sample_messages: Message[] = [
-  {
-    id: Date.now() + 1000,
-    type: 'user',
-    text: 'Hello bot.',
-  },
-  {
-    id: Date.now() + 2000,
-    type: 'bot',
-    text: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed in dignissim lacus. Nam faucibus et lacus quis sodales. Praesent commodo mauris in sodales vulputate. Praesent odio nisl, scelerisque ac diam non, sodales congue enim. Donec aliquet egestas nisl ac commodo. Ut viverra scelerisque tortor in ullamcorper. Nullam eu odio vitae ligula bibendum vulputate vitae ut lorem. Aliquam erat volutpat. In a magna arcu. Etiam tincidunt mi sed efficitur commodo.',
-    sources: ['source1', 'source2'],
-  },
-  {
-    id: Date.now() + 3000,
-    type: 'user',
-    text: 'Give me some error please.',
-  },
-  {
-    id: Date.now() + 4000,
-    type: 'error',
-    text: 'Network error',
-  },
-];
+import { Message, StreamChunk } from './types';
+/* import { submitQuery } from './services/RagService'; */
 
 const getLastUrlPath = (url: string) => {
   const parts = url.split('/');
   return parts[parts.length - 1];
 };
 
-export const PhasmoChat: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>(sample_messages);
+const PhasmoChat: React.FC = () => {
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
   // Scroll down the message list when new message added
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Mutation hook for sending query
-  const { mutate: sendMessage, isPending } = useMutation({
+  // OLD: Mutation hook for sending query
+  /* const mutation = useMutation({
     mutationFn: submitQuery,
     onSuccess: (data) => {
       const newMessage: Message = {
@@ -77,10 +52,11 @@ export const PhasmoChat: React.FC = () => {
       };
       setMessages((prev) => [...prev, errorMessage]);
     },
-  });
+  }); */
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!input.trim()) return;
 
     const userMessage: Message = {
@@ -88,20 +64,79 @@ export const PhasmoChat: React.FC = () => {
       type: 'user',
       text: input,
     };
-
     setMessages((prev) => [...prev, userMessage]);
-    // Simulated bot response
-    setTimeout(() => {
-      const botMessage: Message = {
-        id: Date.now(),
-        type: 'bot',
-        text: `Here's a simulated response to "${input}". In a real app, this would be replaced with actual AI-generated content about Phasmophobia.`,
-      };
-      setMessages((prev) => [...prev, botMessage]);
-    }, 1000);
-
-    //sendMessage(input);
     setInput('');
+
+    // Getting response from server based on the user prompt
+    const response = await fetch('http://localhost:5656/submit_query_stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query_text: input }),
+    });
+    if (!response.ok || !response.body) {
+      const errorMessage: Message = {
+        id: Date.now(),
+        type: 'error',
+        text:
+          response.status && response.statusText
+            ? `${response.status} ${response.statusText}`
+            : 'An unknown error occurred',
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    }
+
+    // Prepping for the streaming response
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+    let streaming = true;
+
+    if (!reader) {
+      throw new Error('Failed to get response reader');
+    }
+
+    const botMessageId = Date.now();
+    const botMessage: Message = {
+      id: botMessageId,
+      type: 'bot',
+      text: '',
+      sources: [],
+    };
+
+    setMessages((prev) => [...prev, botMessage]);
+
+    while (streaming) {
+      // Here we start reading the stream, until its done.
+      const { value, done } = await reader.read();
+      if (done) {
+        streaming = false;
+        break;
+      }
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split('\n').filter((line) => line.trim() !== '');
+
+      for (const line of lines) {
+        try {
+          const data: StreamChunk = JSON.parse(line);
+          if (data.sources) {
+            console.log(data.sources);
+            botMessage.sources = data.sources;
+          }
+          if (data.answer !== undefined) {
+            console.log(data.answer);
+            botMessage.text += data.answer;
+          }
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === botMessageId ? { ...botMessage } : msg
+            )
+          );
+        } catch (error) {
+          console.error('Failed to parse streaming data:', error);
+        }
+      }
+    }
   };
 
   return (
@@ -173,11 +208,11 @@ export const PhasmoChat: React.FC = () => {
             </ListItem>
           );
         })}
-        {isPending && (
+        {/* mutation.isPending && (
           <ListItem sx={{ justifyContent: 'center' }}>
             <CircularProgress size={24} />
           </ListItem>
-        )}
+        ) */}
         <div ref={messagesEndRef} />
       </List>
       <Box
@@ -208,6 +243,7 @@ export const PhasmoChat: React.FC = () => {
         <IconButton
           aria-label='submit'
           type='submit'
+          /* disabled={mutation.isPending} */
           sx={{
             bgcolor: 'secondary.light',
             height: '32px',
@@ -221,3 +257,5 @@ export const PhasmoChat: React.FC = () => {
     </Container>
   );
 };
+
+export default PhasmoChat;

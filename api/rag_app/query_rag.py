@@ -1,7 +1,8 @@
 import os
-import argparse
 from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.documents import Document
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnableParallel
+from langchain_core.runnables import RunnablePassthrough
 from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
 from langchain_cohere import CohereRerank
 from rag_app.get_vector_db import get_chroma_client
@@ -9,6 +10,7 @@ from rag_app.get_llm import get_openai_llm
 from config import LANGCHAIN_API_KEY, COHERE_API_KEY
 from dataclasses import dataclass
 from typing import List
+import json
 
 
 if LANGCHAIN_API_KEY:
@@ -35,15 +37,6 @@ class QueryResponse:
   sources: List[str]
 
 
-def main():
-  # Create CLI.
-  parser = argparse.ArgumentParser()
-  parser.add_argument("query_text", type=str, help="The query text.")
-  args = parser.parse_args()
-  query_text = args.query_text
-  query_rag(query_text)
-
-
 # Retrieve docs from our vector db and perform rerank
 def retrieve_docs(query_text: str):
   db = get_chroma_client()
@@ -57,19 +50,25 @@ def retrieve_docs(query_text: str):
   return compression_retriever.invoke(query_text)
 
 
-def extract_sources(results: List[Document]) -> list[str]:
-  sources = [doc.metadata.get("id", None) for doc in results]
+# Extract sources e.g. https://phasmophobia.fandom.com/wiki/Money
+def extract_sources(docs):
+  sources = [doc.metadata.get("id", None) for doc in docs]
   cleaned_sources = list(set([
     id.rsplit(':', 1)[0] if id else None for id in sources
   ]))
   cleaned_sources = list(filter(None, cleaned_sources))
   return cleaned_sources
 
+
+def format_docs(docs):
+    return "\n\n".join(doc.page_content for doc in docs)
+
+
 def query_rag(query_text: str) -> QueryResponse:
   # Retrieve and format the documents
-  results = retrieve_docs(query_text)
-  context_text = "\n\n".join(doc.page_content for doc in results)
-  sources = extract_sources(results)
+  docs = retrieve_docs(query_text)
+  context_text = format_docs(docs)
+  sources = extract_sources(docs)
 
   # Create a chat promt template
   prompt_template = ChatPromptTemplate.from_template(PROMPT_TEMPLATE)
@@ -88,5 +87,33 @@ def query_rag(query_text: str) -> QueryResponse:
   )
 
 
-if __name__ == "__main__":
-    main()
+async def query_rag_stream(query_text: str):
+  # Retriever with Cohere to rerank documents
+  db = get_chroma_client()
+  retriever = db.as_retriever(search_kwargs={"k": 20})
+  compressor = CohereRerank(cohere_api_key=COHERE_API_KEY, top_n=3)
+  compression_retriever = ContextualCompressionRetriever(
+      base_compressor=compressor, base_retriever=retriever
+  )
+
+  prompt = ChatPromptTemplate.from_template(PROMPT_TEMPLATE)
+  llm = get_openai_llm()
+  llm.streaming = True
+
+  rag_chain_from_docs = (
+    RunnablePassthrough.assign(context=(lambda x: format_docs(x["context"])))
+    | prompt
+    | llm
+    | StrOutputParser()
+  )
+
+  rag_chain_with_source = RunnableParallel(
+      {"context": compression_retriever, "question": RunnablePassthrough()}
+  ).assign(answer=rag_chain_from_docs)
+
+  async for chunk in rag_chain_with_source.astream(query_text):
+    if 'context' in chunk:
+      sources = list({doc.metadata['source'] for doc in chunk['context']})
+      yield json.dumps({"sources": sources}) + "\n"
+    elif 'answer' in chunk:
+      yield json.dumps({"answer": chunk['answer']}) + "\n"

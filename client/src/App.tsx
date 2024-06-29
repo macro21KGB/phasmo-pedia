@@ -2,7 +2,7 @@ import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import theme from './theme';
-import { PhasmoChat } from './PhasmoChat';
+import PhasmoChat from './PhasmoChat';
 
 const queryClient = new QueryClient();
 
