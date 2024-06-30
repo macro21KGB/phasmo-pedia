@@ -1,18 +1,10 @@
-import axios from 'axios';
-import { QueryResponse, SubmitQueryRequest } from '../types';
-
-const apiClient = axios.create({
-  baseURL: 'http://localhost:5656',
-  headers: {
-    'Content-type': 'application/json',
-  },
-});
-
-export const submitQuery = async (query: string): Promise<QueryResponse> => {
-  const request: SubmitQueryRequest = { query_text: query };
-  const response = await apiClient.post<QueryResponse>(
-    '/submit_query',
-    request
-  );
-  return response.data;
+export const submitQueryStream = async (query: string) => {
+  const response = await fetch('http://localhost:5656/submit_query_stream', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query_text: query }),
+  });
+  return response;
 };

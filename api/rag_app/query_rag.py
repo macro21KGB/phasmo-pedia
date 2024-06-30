@@ -22,7 +22,7 @@ PROMPT_TEMPLATE = """
 You are an assistant for question-answering tasks related to Phasmophobia.
 Create a spooky atmosphere in your response and generate a comprehensive \
 and informative answer of 80 words or less for the given question based solely on the provided context.
-If you don't know the answer, just say, 'Hmm, I'm not sure.'
+If you don't know the answer, just say, "Hmm, I'm not sure."
 Answer the question based only on the following context:
 {context}
 
@@ -54,7 +54,7 @@ def retrieve_docs(query_text: str):
 def extract_sources(docs):
   sources = [doc.metadata.get("id", None) for doc in docs]
   cleaned_sources = list(set([
-    id.rsplit(':', 1)[0] if id else None for id in sources
+    id.rsplit(":", 1)[0] if id else None for id in sources
   ]))
   cleaned_sources = list(filter(None, cleaned_sources))
   return cleaned_sources
@@ -112,8 +112,8 @@ async def query_rag_stream(query_text: str):
   ).assign(answer=rag_chain_from_docs)
 
   async for chunk in rag_chain_with_source.astream(query_text):
-    if 'context' in chunk:
-      sources = list({doc.metadata['source'] for doc in chunk['context']})
+    if "context" in chunk:
+      sources = list({doc.metadata["source"] for doc in chunk["context"]})
       yield json.dumps({"sources": sources}) + "\n"
-    elif 'answer' in chunk:
-      yield json.dumps({"answer": chunk['answer']}) + "\n"
+    elif "answer" in chunk:
+      yield json.dumps({"answer": chunk["answer"]}) + "\n"

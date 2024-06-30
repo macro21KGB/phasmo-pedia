@@ -1,9 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-/* import { useMutation } from '@tanstack/react-query'; */
 import {
   Box,
   TextField,
-  /* CircularProgress, */
   Container,
   IconButton,
   ListItem,
@@ -11,10 +9,12 @@ import {
   ListItemText,
   Typography,
   Link,
+  CircularProgress,
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import { Message, StreamChunk } from './types';
-/* import { submitQuery } from './services/RagService'; */
+import { useMutation } from '@tanstack/react-query';
+import { submitQueryStream } from './services/RagService';
 
 const getLastUrlPath = (url: string) => {
   const parts = url.split('/');
@@ -25,22 +25,65 @@ const PhasmoChat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
   // Scroll down the message list when new message added
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // OLD: Mutation hook for sending query
-  /* const mutation = useMutation({
-    mutationFn: submitQuery,
-    onSuccess: (data) => {
-      const newMessage: Message = {
-        id: Date.now(),
+  const mutation = useMutation({
+    mutationFn: submitQueryStream,
+    onSuccess: async (response) => {
+      // Prepping for the streaming response
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let streaming = true;
+
+      if (!reader) {
+        throw new Error('Failed to get response reader');
+      }
+
+      const botMessageId = Date.now();
+      const botMessage: Message = {
+        id: botMessageId,
         type: 'bot',
-        text: data.response_text,
-        sources: data.sources,
+        text: '',
+        sources: [],
       };
-      setMessages((prev) => [...prev, newMessage]);
+
+      setMessages((prev) => [...prev, botMessage]);
+
+      while (streaming) {
+        // Here we start reading the stream, until its done.
+        const { value, done } = await reader.read();
+        if (done) {
+          streaming = false;
+          break;
+        }
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n').filter((line) => line.trim() !== '');
+
+        for (const line of lines) {
+          try {
+            const data: StreamChunk = JSON.parse(line);
+            if (data.sources) {
+              console.log(data.sources);
+              botMessage.sources = data.sources;
+            }
+            if (data.answer !== undefined) {
+              console.log(data.answer);
+              botMessage.text += data.answer;
+            }
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === botMessageId ? { ...botMessage } : msg
+              )
+            );
+          } catch (error) {
+            console.error('Failed to parse streaming data:', error);
+          }
+        }
+      }
     },
     onError: (error) => {
       console.error('Error sending message:', error);
@@ -52,7 +95,7 @@ const PhasmoChat: React.FC = () => {
       };
       setMessages((prev) => [...prev, errorMessage]);
     },
-  }); */
+  });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,76 +110,7 @@ const PhasmoChat: React.FC = () => {
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
 
-    // Getting response from server based on the user prompt
-    const response = await fetch('http://localhost:5656/submit_query_stream', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ query_text: input }),
-    });
-    if (!response.ok || !response.body) {
-      const errorMessage: Message = {
-        id: Date.now(),
-        type: 'error',
-        text:
-          response.status && response.statusText
-            ? `${response.status} ${response.statusText}`
-            : 'An unknown error occurred',
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-    }
-
-    // Prepping for the streaming response
-    const reader = response.body?.getReader();
-    const decoder = new TextDecoder();
-    let streaming = true;
-
-    if (!reader) {
-      throw new Error('Failed to get response reader');
-    }
-
-    const botMessageId = Date.now();
-    const botMessage: Message = {
-      id: botMessageId,
-      type: 'bot',
-      text: '',
-      sources: [],
-    };
-
-    setMessages((prev) => [...prev, botMessage]);
-
-    while (streaming) {
-      // Here we start reading the stream, until its done.
-      const { value, done } = await reader.read();
-      if (done) {
-        streaming = false;
-        break;
-      }
-      const chunk = decoder.decode(value, { stream: true });
-      const lines = chunk.split('\n').filter((line) => line.trim() !== '');
-
-      for (const line of lines) {
-        try {
-          const data: StreamChunk = JSON.parse(line);
-          if (data.sources) {
-            console.log(data.sources);
-            botMessage.sources = data.sources;
-          }
-          if (data.answer !== undefined) {
-            console.log(data.answer);
-            botMessage.text += data.answer;
-          }
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === botMessageId ? { ...botMessage } : msg
-            )
-          );
-        } catch (error) {
-          console.error('Failed to parse streaming data:', error);
-        }
-      }
-    }
+    mutation.mutate(input);
   };
 
   return (
@@ -208,11 +182,11 @@ const PhasmoChat: React.FC = () => {
             </ListItem>
           );
         })}
-        {/* mutation.isPending && (
+        {mutation.isPending && (
           <ListItem sx={{ justifyContent: 'center' }}>
             <CircularProgress size={24} />
           </ListItem>
-        ) */}
+        )}
         <div ref={messagesEndRef} />
       </List>
       <Box
@@ -243,7 +217,7 @@ const PhasmoChat: React.FC = () => {
         <IconButton
           aria-label='submit'
           type='submit'
-          /* disabled={mutation.isPending} */
+          disabled={mutation.isPending}
           sx={{
             bgcolor: 'secondary.light',
             height: '32px',
