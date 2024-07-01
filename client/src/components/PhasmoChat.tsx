@@ -12,9 +12,8 @@ import {
   CircularProgress,
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
-import { Message, StreamChunk } from './types';
-import { useMutation } from '@tanstack/react-query';
-import { submitQueryStream } from './services/RagService';
+import { Message } from '../types';
+import { useChatMutation } from '../hooks/useChatMutation';
 
 const getLastUrlPath = (url: string) => {
   const parts = url.split('/');
@@ -31,70 +30,12 @@ const PhasmoChat: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const mutation = useMutation({
-    mutationFn: submitQueryStream,
-    onSuccess: async (response) => {
-      // Prepping for the streaming response
-      const reader = response.body?.getReader();
-      const decoder = new TextDecoder();
-      let streaming = true;
-
-      if (!reader) {
-        throw new Error('Failed to get response reader');
-      }
-
-      const botMessageId = Date.now();
-      const botMessage: Message = {
-        id: botMessageId,
-        type: 'bot',
-        text: '',
-        sources: [],
-      };
-
-      setMessages((prev) => [...prev, botMessage]);
-
-      while (streaming) {
-        // Here we start reading the stream, until its done.
-        const { value, done } = await reader.read();
-        if (done) {
-          streaming = false;
-          break;
-        }
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n').filter((line) => line.trim() !== '');
-
-        for (const line of lines) {
-          try {
-            const data: StreamChunk = JSON.parse(line);
-            if (data.sources) {
-              console.log(data.sources);
-              botMessage.sources = data.sources;
-            }
-            if (data.answer !== undefined) {
-              console.log(data.answer);
-              botMessage.text += data.answer;
-            }
-            setMessages((prev) =>
-              prev.map((msg) =>
-                msg.id === botMessageId ? { ...botMessage } : msg
-              )
-            );
-          } catch (error) {
-            console.error('Failed to parse streaming data:', error);
-          }
-        }
-      }
-    },
-    onError: (error) => {
-      console.error('Error sending message:', error);
-      const errorMessage: Message = {
-        id: Date.now(),
-        type: 'error',
-        text:
-          error instanceof Error ? error.message : 'An unknown error occurred',
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-    },
+  const mutation = useChatMutation((newMessage) => {
+    setMessages((prev) =>
+      prev.find((msg) => msg.id === newMessage.id)
+        ? prev.map((msg) => (msg.id === newMessage.id ? newMessage : msg))
+        : [...prev, newMessage]
+    );
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
