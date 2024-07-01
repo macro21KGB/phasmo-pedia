@@ -198,7 +198,7 @@ const PhasmoChat: React.FC = () => {
             }}
             autoComplete='off'
           />
-          {messages && (
+          {messages.length > 0 && (
             <IconButton
               sx={{
                 alignSelf: 'center',
