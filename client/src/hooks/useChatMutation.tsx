@@ -3,13 +3,11 @@ import { submitQueryStream } from '../services/RagService';
 import { Message, StreamChunk } from '../types';
 
 export const useChatMutation = (onNewMessage: (message: Message) => void) => {
-  return useMutation({
+  const mutation = useMutation({
     mutationFn: submitQueryStream,
     onSuccess: async (response) => {
-      // Prepping for the streaming response
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
-      let streaming = true;
 
       if (!reader) {
         throw new Error('Failed to get response reader');
@@ -25,8 +23,9 @@ export const useChatMutation = (onNewMessage: (message: Message) => void) => {
 
       onNewMessage(botMessage);
 
+      let streaming = true;
+
       while (streaming) {
-        // Here we start reading the stream, until its done.
         const { value, done } = await reader.read();
         if (done) {
           streaming = false;
@@ -40,14 +39,12 @@ export const useChatMutation = (onNewMessage: (message: Message) => void) => {
           try {
             const data: StreamChunk = JSON.parse(line);
             if (data.sources) {
-              console.log(data.sources);
               botMessage.sources = data.sources;
             }
             if (data.answer !== undefined) {
-              console.log(data.answer);
               botMessage.text += data.answer;
             }
-            onNewMessage(botMessage);
+            onNewMessage({ ...botMessage });
           } catch (error) {
             console.error('Failed to parse streaming data:', error);
           }
@@ -65,4 +62,6 @@ export const useChatMutation = (onNewMessage: (message: Message) => void) => {
       onNewMessage(errorMessage);
     },
   });
+
+  return mutation;
 };
