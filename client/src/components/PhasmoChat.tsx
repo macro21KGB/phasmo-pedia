@@ -6,47 +6,27 @@ import {
   IconButton,
   ListItem,
   List,
-  ListItemText,
-  Typography,
-  Link,
   CircularProgress,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-  Button,
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
 import { Message } from '../types';
 import { useChatMutation } from '../hooks/useChatMutation';
-
-const CHAT_HISTORY_KEY = 'phasmo_chat_history';
-
-const loadMessages = (): Message[] => {
-  const savedMessages = localStorage.getItem(CHAT_HISTORY_KEY);
-  return savedMessages ? JSON.parse(savedMessages) : [];
-};
-
-const saveMessages = (messages: Message[]) => {
-  localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages));
-};
-
-const clearMessages = () => {
-  localStorage.removeItem(CHAT_HISTORY_KEY);
-};
-
-const getLastUrlPath = (url: string) => {
-  const parts = url.split('/');
-  return parts[parts.length - 1];
-};
+import {
+  clearMessages,
+  loadMessages,
+  saveMessages,
+} from '../services/ChatStorageService';
+import LandingText from './LandingText';
+import ChatMessage from './ChatMessage';
+import DeleteChatDialog, { DeleteChatDialogRef } from './DeleteChatDialog';
 
 const PhasmoChat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
-  const [open, setOpen] = useState(false);
+  const [input, setInput] = useState<string>('');
+  const [isLoadingMessages, setIsLoadingMessages] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const dialogRef = useRef<DeleteChatDialogRef>(null);
 
   const mutation = useChatMutation((newMessage) => {
     setMessages((prev) => {
@@ -60,8 +40,10 @@ const PhasmoChat: React.FC = () => {
 
   // Load saved messages when the component mounts
   useEffect(() => {
+    setIsLoadingMessages(true);
     const savedMessages = loadMessages();
     setMessages(savedMessages);
+    setIsLoadingMessages(false);
   }, []);
 
   // Scroll down the message list when new message added
@@ -69,29 +51,29 @@ const PhasmoChat: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  const sendQuery = (query: string) => {
+    const userMessage: Message = {
+      id: Date.now(),
+      type: 'user',
+      text: query,
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    setInput('');
+
+    mutation.mutate(query);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!input.trim()) return;
 
-    const userMessage: Message = {
-      id: Date.now(),
-      type: 'user',
-      text: input,
-    };
-    setMessages((prev) => [...prev, userMessage]);
-    setInput('');
-
-    mutation.mutate(input);
-  };
-
-  const handleClose = () => {
-    setOpen(false);
+    sendQuery(input);
   };
 
   const handleClearChat = () => {
     clearMessages();
-    handleClose();
+    dialogRef.current?.closeDialog();
     setMessages([]);
   };
 
@@ -120,52 +102,30 @@ const PhasmoChat: React.FC = () => {
             },
           }}
         >
-          {messages.map((message) => {
-            const secondaryText = message.sources ? (
-              <Typography variant='overline' sx={{ display: 'flex', gap: 0.5 }}>
-                Sources:
-                {message.sources.map((source, index) => (
-                  <Link
-                    key={index}
-                    href={source}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                  >
-                    {getLastUrlPath(source)}
-                  </Link>
-                ))}
-              </Typography>
-            ) : (
-              <></>
-            );
-            return (
-              <ListItem
-                key={message.id}
-                sx={{
-                  flexDirection: 'column',
-                  alignItems:
-                    message.type === 'user' ? 'flex-end' : 'flex-start',
-                }}
-              >
-                <ListItemText
-                  primary={message.text}
-                  secondary={secondaryText}
-                  sx={{
-                    maxWidth: '80%',
-                    bgcolor:
-                      message.type === 'user'
-                        ? 'secondary.main'
-                        : message.type === 'error'
-                          ? 'error.main'
-                          : 'transparent',
-                    p: 2,
-                    borderRadius: 10,
-                    textTransform: 'uppercase',
-                  }}
-                />
-              </ListItem>
-            );
-          })}
+          {isLoadingMessages ? (
+            <ListItem
+              sx={{
+                justifyContent: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+              }}
+            >
+              <CircularProgress size={24} />
+            </ListItem>
+          ) : messages.length > 0 ? (
+            messages.map((message, index) => (
+              <ChatMessage key={index} message={message} />
+            ))
+          ) : (
+            <ListItem
+              sx={{
+                height: '100%',
+              }}
+            >
+              <LandingText sendQuery={sendQuery} />
+            </ListItem>
+          )}
           {mutation.isPending && (
             <ListItem sx={{ justifyContent: 'center' }}>
               <CircularProgress size={24} />
@@ -207,7 +167,7 @@ const PhasmoChat: React.FC = () => {
                   bgcolor: 'error.main',
                 },
               }}
-              onClick={() => setOpen(true)}
+              onClick={() => dialogRef.current?.openDialog()}
             >
               <DeleteSweepIcon fontSize='small' />
             </IconButton>
@@ -225,39 +185,7 @@ const PhasmoChat: React.FC = () => {
           </IconButton>
         </Box>
       </Container>
-      <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
-        aria-labelledby='alert-dialog-title'
-        aria-describedby='alert-dialog-description'
-        PaperProps={{
-          sx: {
-            bgcolor: 'secondary.main',
-            fontFamily: 'Arial',
-          },
-        }}
-      >
-        <DialogTitle id='alert-dialog-title' fontFamily='inherit'>
-          {'Clear Chat History?'}
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText id='alert-dialog-description' fontFamily='inherit'>
-            Are you sure you want to clear your chat history?
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button sx={{ fontFamily: 'inherit' }} onClick={handleClose}>
-            Disagree
-          </Button>
-          <Button
-            sx={{ fontFamily: 'inherit' }}
-            onClick={handleClearChat}
-            autoFocus
-          >
-            Agree
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <DeleteChatDialog handleClearChat={handleClearChat} ref={dialogRef} />
     </>
   );
 };
