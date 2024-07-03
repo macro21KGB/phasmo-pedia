@@ -10,16 +10,19 @@ const getLastUrlPath = (url: string) => {
   return parts[parts.length - 1];
 };
 
-const ChatMessage = ({ message }: Props) => {
+const linkColors = ['rgb(255,189,236)', 'rgb(178,248,178)', 'rgb(255,192,107)'];
+
+const MessageItem = ({ message }: Props) => {
   const secondaryText = message.sources ? (
-    <Typography variant='overline' sx={{ display: 'flex', gap: 0.5 }}>
-      Sources:
+    <Typography variant='overline' display='flex' gap={0.8}>
+      Source(s):
       {message.sources.map((source, index) => (
         <Link
           key={index}
           href={source}
           target='_blank'
           rel='noopener noreferrer'
+          color={linkColors[index % linkColors.length]}
         >
           {getLastUrlPath(source)}
         </Link>
@@ -57,4 +60,4 @@ const ChatMessage = ({ message }: Props) => {
   );
 };
 
-export default ChatMessage;
+export default MessageItem;

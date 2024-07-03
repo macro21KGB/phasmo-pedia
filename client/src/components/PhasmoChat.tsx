@@ -7,6 +7,7 @@ import {
   ListItem,
   List,
   CircularProgress,
+  Stack,
 } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
 import DeleteSweepIcon from '@mui/icons-material/DeleteSweep';
@@ -18,7 +19,7 @@ import {
   saveMessages,
 } from '../services/ChatStorageService';
 import LandingText from './LandingText';
-import ChatMessage from './ChatMessage';
+import MessageItem from './MessageItem';
 import DeleteChatDialog, { DeleteChatDialogRef } from './DeleteChatDialog';
 
 const PhasmoChat: React.FC = () => {
@@ -76,100 +77,93 @@ const PhasmoChat: React.FC = () => {
 
   return (
     <>
-      <Container
-        maxWidth='md'
-        sx={{
-          height: '100%',
-          py: 4,
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        <List
-          sx={{
-            flexGrow: 1,
-            overflowY: 'auto',
-            '&::-webkit-scrollbar': {
-              width: '12px',
-            },
-            '&::-webkit-scrollbar-thumb': {
-              borderRadius: '10px',
-              WebkitBoxShadow: 'inset 0 0 6px rgba(0,0,0,.3)',
-              bgcolor: 'secondary.light',
-            },
-          }}
-        >
-          {messages.length > 0 ? (
-            messages.map((message, index) => (
-              <ChatMessage key={index} message={message} />
-            ))
-          ) : (
-            <ListItem
-              sx={{
-                height: '100%',
-              }}
-            >
-              <LandingText sendQuery={sendQuery} />
-            </ListItem>
-          )}
-          {mutation.isPending && (
-            <ListItem sx={{ justifyContent: 'center' }}>
-              <CircularProgress size={24} />
-            </ListItem>
-          )}
-          <div ref={messagesEndRef} />
-        </List>
-        <Box
-          component='form'
-          onSubmit={handleSubmit}
-          sx={{
-            display: 'flex',
-            bgcolor: 'secondary.main',
-            borderRadius: 10,
-            justifySelf: 'flex-end',
-            px: 1,
-          }}
-        >
-          <TextField
-            fullWidth
-            variant='outlined'
-            placeholder='Message PhasmoGPT'
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
+      <Container maxWidth='md' sx={{ height: '100%' }}>
+        <Stack py={4} height='100%'>
+          <List
             sx={{
-              '& fieldset': { border: 'none' },
-              '& .MuiInputBase-input': {
-                fontFamily: 'Arial',
+              flexGrow: 1,
+              overflowY: 'auto',
+              '&::-webkit-scrollbar': {
+                width: '12px',
+              },
+              '&::-webkit-scrollbar-thumb': {
+                borderRadius: '10px',
+                WebkitBoxShadow: 'inset 0 0 6px rgba(0,0,0,.3)',
+                bgcolor: 'secondary.light',
               },
             }}
-            autoComplete='off'
-          />
-          {messages.length > 0 && (
-            <IconButton
-              sx={{
-                alignSelf: 'center',
-                mr: 1,
-                '&:hover': {
-                  bgcolor: 'error.main',
-                },
-              }}
-              onClick={() => dialogRef.current?.openDialog()}
-            >
-              <DeleteSweepIcon fontSize='small' />
-            </IconButton>
-          )}
-          <IconButton
-            aria-label='submit'
-            type='submit'
-            disabled={mutation.isPending}
-            sx={{
-              bgcolor: 'secondary.light',
-              alignSelf: 'center',
-            }}
           >
-            <SendIcon fontSize='small' />
-          </IconButton>
-        </Box>
+            {messages.length > 0 ? (
+              messages.map((message, index) => (
+                <MessageItem key={index} message={message} />
+              ))
+            ) : (
+              <ListItem
+                sx={{
+                  height: '100%',
+                }}
+              >
+                <LandingText sendQuery={sendQuery} />
+              </ListItem>
+            )}
+            {mutation.isPending && (
+              <ListItem sx={{ justifyContent: 'center' }}>
+                <CircularProgress size={24} />
+              </ListItem>
+            )}
+            <div ref={messagesEndRef} />
+          </List>
+          <Box
+            justifySelf='flex-end'
+            component='form'
+            onSubmit={handleSubmit}
+            borderRadius={10}
+            px={1}
+            bgcolor='secondary.main'
+          >
+            <Stack direction='row'>
+              <TextField
+                fullWidth
+                variant='outlined'
+                placeholder='Message PhasmoGPT'
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                sx={{
+                  '& fieldset': { border: 'none' },
+                  '& .MuiInputBase-input': {
+                    fontFamily: 'Arial',
+                  },
+                }}
+                autoComplete='off'
+              />
+              {messages.length > 0 && (
+                <IconButton
+                  sx={{
+                    alignSelf: 'center',
+                    mr: 1,
+                    '&:hover': {
+                      bgcolor: 'error.main',
+                    },
+                  }}
+                  onClick={() => dialogRef.current?.openDialog()}
+                >
+                  <DeleteSweepIcon fontSize='small' />
+                </IconButton>
+              )}
+              <IconButton
+                aria-label='submit'
+                type='submit'
+                disabled={mutation.isPending}
+                sx={{
+                  bgcolor: 'secondary.light',
+                  alignSelf: 'center',
+                }}
+              >
+                <SendIcon fontSize='small' />
+              </IconButton>
+            </Stack>
+          </Box>
+        </Stack>
       </Container>
       <DeleteChatDialog handleClearChat={handleClearChat} ref={dialogRef} />
     </>
