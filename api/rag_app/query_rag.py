@@ -43,7 +43,7 @@ def retrieve_docs(query_text: str):
   retriever = db.as_retriever(search_kwargs={"k": 20})
 
   # Using Cohere to rerank the documents
-  compressor = CohereRerank(cohere_api_key=COHERE_API_KEY, top_n=3)
+  compressor = CohereRerank(cohere_api_key=COHERE_API_KEY, top_n=5)
   compression_retriever = ContextualCompressionRetriever(
       base_compressor=compressor, base_retriever=retriever
   )
