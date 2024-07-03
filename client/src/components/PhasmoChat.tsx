@@ -24,7 +24,6 @@ import DeleteChatDialog, { DeleteChatDialogRef } from './DeleteChatDialog';
 const PhasmoChat: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState<string>('');
-  const [isLoadingMessages, setIsLoadingMessages] = useState<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const dialogRef = useRef<DeleteChatDialogRef>(null);
 
@@ -38,12 +37,10 @@ const PhasmoChat: React.FC = () => {
     });
   });
 
-  // Load saved messages when the component mounts
   useEffect(() => {
-    setIsLoadingMessages(true);
+    // Load saved messages when the component mounts
     const savedMessages = loadMessages();
     setMessages(savedMessages);
-    setIsLoadingMessages(false);
   }, []);
 
   // Scroll down the message list when new message added
@@ -102,18 +99,7 @@ const PhasmoChat: React.FC = () => {
             },
           }}
         >
-          {isLoadingMessages ? (
-            <ListItem
-              sx={{
-                justifyContent: 'center',
-                display: 'flex',
-                flexDirection: 'column',
-                height: '100%',
-              }}
-            >
-              <CircularProgress size={24} />
-            </ListItem>
-          ) : messages.length > 0 ? (
+          {messages.length > 0 ? (
             messages.map((message, index) => (
               <ChatMessage key={index} message={message} />
             ))
