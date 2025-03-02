@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Fetch API keys from environment variables
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 LANGCHAIN_API_KEY = os.getenv("LANGCHAIN_API_KEY")
 COHERE_API_KEY = os.getenv("COHERE_API_KEY")
 
@@ -15,7 +15,7 @@ SITEMAP_PATH = "./data/sitemap/phasmophobia_wiki.xml"
 
 # Check for required API keys and raise detailed exceptions if missing
 required_env_vars = {
-    "OPENAI_API_KEY": OPENAI_API_KEY,
+    "OPENROUTER_API_KEY": OPENROUTER_API_KEY,
     "COHERE_API_KEY": COHERE_API_KEY
 }
 
