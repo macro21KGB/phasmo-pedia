@@ -147,7 +147,7 @@ const PhasmoChat: React.FC = () => {
                   }}
                   onClick={() => dialogRef.current?.openDialog()}
                 >
-                  <DeleteSweepIcon fontSize='small' />
+                  <DeleteSweepIcon htmlColor='gray' fontSize='small' />
                 </IconButton>
               )}
               <IconButton

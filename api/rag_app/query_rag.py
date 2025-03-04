@@ -4,19 +4,11 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnableParallel
 from langchain_core.runnables import RunnablePassthrough
 from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
-from langchain_cohere import CohereRerank
 from rag_app.get_vector_db import get_chroma_client
 from rag_app.get_llm import get_openai_llm
-from config import LANGCHAIN_API_KEY, COHERE_API_KEY
 from dataclasses import dataclass
 from typing import List
 import json
-
-
-if LANGCHAIN_API_KEY:
-  os.environ["LANGCHAIN_TRACING_V2"] = "true"
-  os.environ["LANGCHAIN_API_KEY"] = LANGCHAIN_API_KEY
-
 
 PROMPT_TEMPLATE = """
 You are an assistant for question-answering tasks related to Phasmophobia.
@@ -41,13 +33,7 @@ class QueryResponse:
 def retrieve_docs(query_text: str):
   db = get_chroma_client()
   retriever = db.as_retriever(search_kwargs={"k": 20})
-
-  # Using Cohere to rerank the documents
-  compressor = CohereRerank(cohere_api_key=COHERE_API_KEY, top_n=5)
-  compression_retriever = ContextualCompressionRetriever(
-      base_compressor=compressor, base_retriever=retriever
-  )
-  return compression_retriever.invoke(query_text)
+  return  retriever.invoke(query_text)
 
 
 # Extract sources e.g. https://phasmophobia.fandom.com/wiki/Money
@@ -91,10 +77,6 @@ async def query_rag_stream(query_text: str):
   # Retriever with Cohere to rerank documents
   db = get_chroma_client()
   retriever = db.as_retriever(search_kwargs={"k": 20})
-  compressor = CohereRerank(cohere_api_key=COHERE_API_KEY, top_n=3)
-  compression_retriever = ContextualCompressionRetriever(
-      base_compressor=compressor, base_retriever=retriever
-  )
 
   prompt = ChatPromptTemplate.from_template(PROMPT_TEMPLATE)
   llm = get_openai_llm()
@@ -108,7 +90,7 @@ async def query_rag_stream(query_text: str):
   )
 
   rag_chain_with_source = RunnableParallel(
-      {"context": compression_retriever, "question": RunnablePassthrough()}
+      {"context": retriever, "question": RunnablePassthrough()}
   ).assign(answer=rag_chain_from_docs)
 
   async for chunk in rag_chain_with_source.astream(query_text):

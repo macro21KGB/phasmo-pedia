@@ -4,7 +4,6 @@ import os
 import shutil
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain.schema.document import Document
-from langchain_community.vectorstores import Chroma
 from langchain_community.document_loaders.sitemap import SitemapLoader
 from rag_app.get_vector_db import get_chroma_client
 from bs4 import BeautifulSoup
@@ -61,7 +60,6 @@ def load_documents():
     document_loader = SitemapLoader(web_path=SITEMAP_PATH, is_local=True, parsing_function=extract_main_content)
     document_loader.requests_per_second = 2
     # Optional: avoid `[SSL: CERTIFICATE_VERIFY_FAILED]` issue
-    document_loader.requests_kwargs = {"verify": False}
     return document_loader.load()
 
 

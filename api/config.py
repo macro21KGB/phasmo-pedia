@@ -6,8 +6,8 @@ load_dotenv()
 
 # Fetch API keys from environment variables
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 LANGCHAIN_API_KEY = os.getenv("LANGCHAIN_API_KEY")
-COHERE_API_KEY = os.getenv("COHERE_API_KEY")
 
 # Define paths
 CHROMA_PATH = "./data/chroma"
@@ -16,7 +16,7 @@ SITEMAP_PATH = "./data/sitemap/phasmophobia_wiki.xml"
 # Check for required API keys and raise detailed exceptions if missing
 required_env_vars = {
     "OPENROUTER_API_KEY": OPENROUTER_API_KEY,
-    "COHERE_API_KEY": COHERE_API_KEY
+    "GOOGLE_API_KEY": GOOGLE_API_KEY,
 }
 
 for var_name, var_value in required_env_vars.items():
